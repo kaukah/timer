@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Focus Timer</title>
+  <style>
+    @keyframes drainAnimation {
+      from { height: 100vh; }
+      to { height: 0; }
+    }
+
+    body {
+      background-color: #000;
+      color: #fff;
+      font-family: sans-serif;
+      margin: 0;
+      overflow: hidden;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      text-align: center;
+    }
+
+    #progressBar {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      height: 0;
+      transition: background-color 1.5s ease;
+      z-index: -1;
+    }
+
+    #homeScreen, #focusScreen {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 20px;
+    }
+
+    #stopwatchDisplay, #focusDisplay {
+      font-size: 8em;
+      font-weight: 300;
+      margin: 0;
+    }
+
+    .time-button {
+      background-color: transparent;
+      border: 2px solid #fff;
+      color: white;
+      padding: 15px 30px;
+      font-size: 1.5em;
+      cursor: pointer;
+      border-radius: 8px;
+      width: 200px;
+      transition: background-color 0.3s, transform 0.2s;
+    }
+    .time-button:hover { background-color: #fff; color: red; transform: scale(1.05); }
+
+    #backButton {
+      margin-top: 40px;
+      background-color: transparent;
+      border: 2px solid #fff;
+      color: #fff;
+      padding: 10px 25px;
+      font-size: 1em;
+      cursor: pointer;
+      border-radius: 5px;
+    }
+    #backButton:hover { background: #fff; color: #000; }
+
+    .hidden { display: none !important; }
+  </style>
+</head>
+<body>
+
+  <div id="progressBar"></div>
+
+  <!-- Home = Stopwatch (break mode) -->
+  <div id="homeScreen">
+    <h2>☕ Sruup your Coffee...</h2>
+    <h1 id="stopwatchDisplay">00:00</h1>
+    <button class="time-button" data-minutes="4">4 Menit</button>
+    <button class="time-button" data-minutes="5">5 Menit</button>
+    <button class="time-button" data-minutes="15">15 Menit</button>
+    <button class="time-button" data-minutes="30">30 Menit</button>
+    <button class="time-button" data-minutes="60">60 Menit</button>
+  </div>
+
+  <!-- Focus mode -->
+  <div id="focusScreen" class="hidden">
+    <h1 id="focusDisplay">00:00</h1>
+    <button id="backButton">Kembali</button>
+  </div>
+
+  <audio id="dingSound" src="ding.mp3" preload="auto"></audio>
+
+  <script>
+    const homeScreen = document.getElementById('homeScreen');
+    const focusScreen = document.getElementById('focusScreen');
+    const stopwatchDisplay = document.getElementById('stopwatchDisplay');
+    const focusDisplay = document.getElementById('focusDisplay');
+    const backButton = document.getElementById('backButton');
+    const progressBar = document.getElementById('progressBar');
+    const dingSound = document.getElementById('dingSound');
+    const timeButtons = document.querySelectorAll('.time-button');
+
+    let stopwatchInterval, focusInterval;
+    let elapsed = 0;
+    let wakeLock = null;
+
+    const COLOR_HIGH = '#2ed573';
+    const COLOR_MEDIUM = '#ffa502';
+    const COLOR_LOW = '#ff4757';
+
+    // === Wake Lock ===
+    async function requestWakeLock() {
+      try {
+        if ("wakeLock" in navigator) {
+          wakeLock = await navigator.wakeLock.request("screen");
+          console.log("Wake Lock aktif");
+          wakeLock.addEventListener("release", () => {
+            console.log("Wake Lock dilepas");
+          });
+        }
+      } catch (err) {
+        console.error(`${err.name}, ${err.message}`);
+      }
+    }
+
+    async function releaseWakeLock() {
+      try {
+        if (wakeLock !== null) {
+          await wakeLock.release();
+          wakeLock = null;
+          console.log("Wake Lock manual release");
+        }
+      } catch (err) {
+        console.error(`${err.name}, ${err.message}`);
+      }
+    }
+
+    // stopwatch (break mode)
+    function startStopwatch() {
+      clearInterval(stopwatchInterval);
+      elapsed = 0;
+      progressBar.style.animation = 'none';
+      progressBar.style.backgroundColor = '#ff0000';
+      progressBar.style.height = '100vh';
+      stopwatchInterval = setInterval(() => {
+        elapsed++;
+        const m = String(Math.floor(elapsed / 60)).padStart(2,'0');
+        const s = String(elapsed % 60).padStart(2,'0');
+        stopwatchDisplay.textContent = `${m}:${s}`;
+      }, 1000);
+
+      requestWakeLock(); // layar tetap nyala
+    }
+
+    // fokus countdown (dengan animasi drain)
+    function startFocus(minutes) {
+      clearInterval(stopwatchInterval);
+      releaseWakeLock(); // biarkan layar bisa mati saat fokus
+
+      let totalSeconds = minutes*60;
+      let remain = totalSeconds;
+
+      homeScreen.classList.add('hidden');
+      focusScreen.classList.remove('hidden');
+
+      // restart animasi
+      progressBar.style.animation = 'none';
+      void progressBar.offsetWidth; 
+      progressBar.style.animation = `drainAnimation ${totalSeconds}s linear forwards`;
+      progressBar.style.animationPlayState = 'running';
+      progressBar.style.backgroundColor = COLOR_HIGH;
+
+      function update() {
+        const m = String(Math.floor(remain/60)).padStart(2,'0');
+        const s = String(remain%60).padStart(2,'0');
+        focusDisplay.textContent = `${m}:${s}`;
+
+        const pct = (remain/totalSeconds)*100;
+        if (pct <= 20) progressBar.style.backgroundColor = COLOR_LOW;
+        else if (pct <= 50) progressBar.style.backgroundColor = COLOR_MEDIUM;
+        else progressBar.style.backgroundColor = COLOR_HIGH;
+      }
+      update();
+
+      focusInterval = setInterval(() => {
+        remain--;
+        update();
+        if (remain < 0) {
+          clearInterval(focusInterval);
+          dingSound.play();
+          // balik ke break (stopwatch)
+          focusScreen.classList.add('hidden');
+          homeScreen.classList.remove('hidden');
+          startStopwatch();
+        }
+      }, 1000);
+    }
+
+    function stopFocus() {
+      clearInterval(focusInterval);
+      focusScreen.classList.add('hidden');
+      homeScreen.classList.remove('hidden');
+      startStopwatch();
+    }
+
+    timeButtons.forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        const m = parseInt(btn.dataset.minutes);
+        startFocus(m);
+      });
+    });
+    backButton.addEventListener('click', stopFocus);
+
+    // start stopwatch langsung saat load
+    startStopwatch();
+  </script>
+</body>
+</html>
