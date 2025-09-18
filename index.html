@@ -33,7 +33,6 @@
             z-index: -1;
         }
 
-        /* Gaya baru untuk tombol notifikasi */
         #notifyButton {
             position: fixed;
             top: 20px;
@@ -55,6 +54,18 @@
             background-color: #fff;
             color: #fff;
             transform: scale(1.1);
+        }
+
+        /* Gaya baru untuk persentase di pojok kanan bawah */
+        #bottomRightPercentage {
+            position: fixed;
+            bottom: 0px;
+            right: 5px;
+            font-size: 1.2em;
+            color: #fff;
+            text-shadow: 0 0 5px rgba(0,0,0,0.5);
+            z-index: 5;
+            transition: color 0.5s;
         }
 
         #homeScreen, #focusScreen {
@@ -94,7 +105,7 @@
             width: 200px;
             transition: background-color 0.3s, transform 0.2s;
         }
-        #pomodoroButton:hover { background-color: #00b894; color: #fff; transform: scale(1.05); }
+        #pomodoroButton:hover { background-color: #fff; color: #000; transform: scale(1.05); }
         
         #backButton, #pauseButton {
             background-color: transparent;
@@ -134,11 +145,12 @@
 
     <div id="progressBar"></div>
     <button id="notifyButton">🔔</button>
+    <span id="bottomRightPercentage" class="hidden"></span>
 
     <div id="homeScreen">
         <h2>☕ Sruup your Coffee...</h2>
         <h1 id="stopwatchDisplay">00:00</h1>
-        <button class="time-button" data-minutes="1">1 Menit</button>
+        <button class="time-button" data-minutes="5">5 Menit</button>
         <button class="time-button" data-minutes="10">10 Menit</button>
         <button id="pomodoroButton">Pomodoro</button>
         <button class="time-button" data-minutes="60">60 Menit</button>
@@ -170,6 +182,7 @@
         const stopwatchDisplay = document.getElementById('stopwatchDisplay');
         const focusDisplay = document.getElementById('focusDisplay');
         const percentageDisplay = document.getElementById('percentageDisplay');
+        const bottomRightPercentage = document.getElementById('bottomRightPercentage');
         const sessionTitle = document.getElementById('sessionTitle');
         const backButton = document.getElementById('backButton');
         const pauseButton = document.getElementById('pauseButton');
@@ -194,6 +207,7 @@
         const COLOR_HIGH = '#2ed573';
         const COLOR_MEDIUM = '#ffa502';
         const COLOR_LOW = '#ff4757';
+                const WHITE = '#fff';
 
         let focusLog = JSON.parse(localStorage.getItem('focusLog')) || [];
         let myChart;
@@ -261,7 +275,8 @@
                 const s = String(elapsed % 60).padStart(2,'0');
                 stopwatchDisplay.textContent = `${m}:${s}`;
             }, 1000);
-
+            
+            bottomRightPercentage.classList.add('hidden'); // Sembunyikan saat di home screen
             requestWakeLock();
         }
 
@@ -315,7 +330,8 @@
 
             homeScreen.classList.add('hidden');
             focusScreen.classList.remove('hidden');
-
+            bottomRightPercentage.classList.remove('hidden'); // Tampilkan persentase di kanan bawah
+            
             sessionTitle.textContent = sessionType === 'Fokus' ? 'Sesi Fokus' : 'Sesi Istirahat';
             
             isPaused = false;
@@ -344,6 +360,7 @@
             isPomodoroActive = false;
             focusScreen.classList.add('hidden');
             homeScreen.classList.remove('hidden');
+            bottomRightPercentage.classList.add('hidden'); // Sembunyikan saat berhenti
             startStopwatch();
         }
 
@@ -376,11 +393,21 @@
             focusDisplay.textContent = `${m}:${s}`;
             
             const pct = (Math.max(0, remainingSeconds) / totalSeconds) * 100;
-            percentageDisplay.textContent = `${Math.round(pct)}%`;
+            const roundedPct = `${Math.round(pct)}%`;
 
-            if (pct <= 20) progressBar.style.backgroundColor = COLOR_LOW;
-            else if (pct <= 50) progressBar.style.backgroundColor = COLOR_MEDIUM;
-            else progressBar.style.backgroundColor = COLOR_HIGH;
+            percentageDisplay.textContent = roundedPct;
+            bottomRightPercentage.textContent = roundedPct;
+
+            if (pct <= 20) {
+                progressBar.style.backgroundColor = COLOR_LOW;
+                bottomRightPercentage.style.color = WHITE;
+            } else if (pct <= 50) {
+                progressBar.style.backgroundColor = COLOR_MEDIUM;
+                bottomRightPercentage.style.color = WHITE;
+            } else {
+                progressBar.style.backgroundColor = COLOR_HIGH;
+                bottomRightPercentage.style.color = WHITE;
+            }
         }
 
         function updateDailyLog() {
