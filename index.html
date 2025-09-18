@@ -56,10 +56,9 @@
             transform: scale(1.1);
         }
 
-        /* Gaya baru untuk persentase di pojok kanan bawah */
         #bottomRightDisplay {
             position: fixed;
-            bottom: 0px;
+            bottom: 5px; /* Disesuaikan agar lebih rapi */
             right: 5px;
             font-size: 1.2em;
             color: #fff;
@@ -197,7 +196,7 @@
 
         let stopwatchInterval, focusInterval;
         let elapsed = 0;
-        let elapsedFocusTime = 0; // Waktu maju saat fokus
+        let elapsedFocusTime = 0;
         let wakeLock = null;
         let isPomodoroActive = false;
         let notificationEnabled = false;
@@ -273,7 +272,7 @@
             progressBar.style.backgroundColor = '#ff0000';
             progressBar.style.height = '100vh';
             
-            bottomRightDisplay.classList.add('hidden'); // Sembunyikan stopwatch di home screen
+            bottomRightDisplay.classList.add('hidden');
 
             stopwatchInterval = setInterval(() => {
                 elapsed++;
@@ -332,7 +331,7 @@
 
             totalSeconds = minutes * 60;
             remainingSeconds = totalSeconds;
-            elapsedFocusTime = 0; // Reset stopwatch
+            elapsedFocusTime = 0;
             
             homeScreen.classList.add('hidden');
             focusScreen.classList.remove('hidden');
@@ -374,7 +373,7 @@
         function togglePause() {
             if (isPaused) {
                 isPaused = false;
-                pauseButton.textContent = 'Lanjut';
+                pauseButton.textContent = 'Jeda';
                 tictacSound.play();
                 progressBar.style.animationPlayState = 'running';
                 
@@ -388,7 +387,7 @@
                 }, 1000);
             } else {
                 isPaused = true;
-                pauseButton.textContent = 'Jeda';
+                pauseButton.textContent = 'Lanjut';
                 tictacSound.pause();
                 progressBar.style.animationPlayState = 'paused';
                 clearInterval(focusInterval);
@@ -396,17 +395,14 @@
         }
         
         function updateDisplay() {
-            // Update tampilan utama (timer mundur)
             const m = String(Math.floor(remainingSeconds/60)).padStart(2,'0');
             const s = String(remainingSeconds%60).padStart(2,'0');
             focusDisplay.textContent = `${m}:${s}`;
             
-            // Update tampilan persentase (di atas timer mundur)
             const pct = (Math.max(0, remainingSeconds) / totalSeconds) * 100;
             const roundedPct = `${Math.round(pct)}%`;
             percentageDisplay.textContent = roundedPct;
 
-            // Update tampilan di pojok kanan bawah (stopwatch maju)
             const mElapsed = String(Math.floor(elapsedFocusTime / 60)).padStart(2,'0');
             const sElapsed = String(elapsedFocusTime % 60).padStart(2,'0');
             bottomRightDisplay.textContent = `${mElapsed}:${sElapsed}`;
@@ -418,7 +414,7 @@
             } else {
                 progressBar.style.backgroundColor = COLOR_HIGH;
             }
-            bottomRightDisplay.style.color = WHITE; // Pertahankan warna putih untuk stopwatch
+            bottomRightDisplay.style.color = WHITE;
         }
 
         function updateDailyLog() {
@@ -517,6 +513,14 @@
         startStopwatch();
         updateDailyLog();
         createChart();
+
+        // Menambahkan shortcut keyboard untuk jeda/lanjut
+        document.addEventListener('keydown', (event) => {
+            if (event.code === 'Space' && !focusScreen.classList.contains('hidden')) {
+                event.preventDefault();
+                togglePause();
+            }
+        });
     </script>
 </body>
 </html>
