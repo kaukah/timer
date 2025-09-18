@@ -39,7 +39,7 @@
             right: 20px;
             background-color: transparent;
             border: 2px solid #fff;
-            color: #00b894;
+            color: #fff;
             padding: 10px;
             font-size: 1.5em;
             cursor: pointer;
@@ -155,7 +155,7 @@
         <button class="time-button" data-minutes="60">60 Menit</button>
         
         <div id="productivityStats">
-            <p>Total Waktu Fokus Hari Ini: <b id="dailyFocusTime">0 Menit</b></p>
+            <p>🔥 Durasi Kerja: <b id="dailyFocusTime">0 Menit</b></p>
             <div style="width: 80vw; max-width: 600px; margin: 20px auto;">
                 <canvas id="productivityChart"></canvas>
             </div>
@@ -167,8 +167,8 @@
         <h2 id="percentageDisplay" style="font-size: 2em; margin-bottom: -10px;"></h2>
         <h1 id="focusDisplay">00:00</h1>
         <div id="backPauseContainer">
-            <button id="backButton">Kembali</button>
-            <button id="pauseButton">Jeda</button>
+            <button id="backButton">↩️ Back</button>
+            <button id="pauseButton">☕ Pause</button>
         </div>
     </div>
 
@@ -456,7 +456,7 @@
                 data: {
                     labels: labels,
                     datasets: [{
-                        label: 'Total Waktu Fokus (Menit)',
+                        label: 'Cart',
                         data: data,
                         backgroundColor: '#FFF',
                         borderColor: '#FFF',
