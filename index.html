@@ -57,10 +57,10 @@
         }
 
         /* Gaya baru untuk persentase di pojok kanan bawah */
-        #bottomRightPercentage {
+        #bottomRightDisplay {
             position: fixed;
             bottom: 0px;
-            right: 5px;
+            right: 10px;
             font-size: 1.2em;
             color: #fff;
             text-shadow: 0 0 5px rgba(0,0,0,0.5);
@@ -145,7 +145,7 @@
 
     <div id="progressBar"></div>
     <button id="notifyButton">🔔</button>
-    <span id="bottomRightPercentage" class="hidden"></span>
+    <span id="bottomRightDisplay" class="hidden"></span>
 
     <div id="homeScreen">
         <h2>☕ Sruup your Coffee...</h2>
@@ -182,7 +182,7 @@
         const stopwatchDisplay = document.getElementById('stopwatchDisplay');
         const focusDisplay = document.getElementById('focusDisplay');
         const percentageDisplay = document.getElementById('percentageDisplay');
-        const bottomRightPercentage = document.getElementById('bottomRightPercentage');
+        const bottomRightDisplay = document.getElementById('bottomRightDisplay');
         const sessionTitle = document.getElementById('sessionTitle');
         const backButton = document.getElementById('backButton');
         const pauseButton = document.getElementById('pauseButton');
@@ -197,6 +197,7 @@
 
         let stopwatchInterval, focusInterval;
         let elapsed = 0;
+        let elapsedFocusTime = 0; // Waktu maju saat fokus
         let wakeLock = null;
         let isPomodoroActive = false;
         let notificationEnabled = false;
@@ -207,7 +208,7 @@
         const COLOR_HIGH = '#2ed573';
         const COLOR_MEDIUM = '#ffa502';
         const COLOR_LOW = '#ff4757';
-                const WHITE = '#fff';
+        const WHITE = '#fff';
 
         let focusLog = JSON.parse(localStorage.getItem('focusLog')) || [];
         let myChart;
@@ -264,11 +265,16 @@
 
         function startStopwatch() {
             clearInterval(stopwatchInterval);
+            clearInterval(focusInterval);
             tictacSound.pause();
+            
             elapsed = 0;
             progressBar.style.animation = 'none';
             progressBar.style.backgroundColor = '#ff0000';
             progressBar.style.height = '100vh';
+            
+            bottomRightDisplay.classList.add('hidden'); // Sembunyikan stopwatch di home screen
+
             stopwatchInterval = setInterval(() => {
                 elapsed++;
                 const m = String(Math.floor(elapsed / 60)).padStart(2,'0');
@@ -276,7 +282,6 @@
                 stopwatchDisplay.textContent = `${m}:${s}`;
             }, 1000);
             
-            bottomRightPercentage.classList.add('hidden'); // Sembunyikan saat di home screen
             requestWakeLock();
         }
 
@@ -327,10 +332,11 @@
 
             totalSeconds = minutes * 60;
             remainingSeconds = totalSeconds;
-
+            elapsedFocusTime = 0; // Reset stopwatch
+            
             homeScreen.classList.add('hidden');
             focusScreen.classList.remove('hidden');
-            bottomRightPercentage.classList.remove('hidden'); // Tampilkan persentase di kanan bawah
+            bottomRightDisplay.classList.remove('hidden');
             
             sessionTitle.textContent = sessionType === 'Fokus' ? 'Sesi Fokus' : 'Sesi Istirahat';
             
@@ -347,6 +353,7 @@
 
             focusInterval = setInterval(() => {
                 remainingSeconds--;
+                elapsedFocusTime++;
                 updateDisplay();
                 if (remainingSeconds <= 0) {
                     endOfSession(minutes, sessionType);
@@ -360,7 +367,7 @@
             isPomodoroActive = false;
             focusScreen.classList.add('hidden');
             homeScreen.classList.remove('hidden');
-            bottomRightPercentage.classList.add('hidden'); // Sembunyikan saat berhenti
+            bottomRightDisplay.classList.add('hidden');
             startStopwatch();
         }
 
@@ -373,6 +380,7 @@
                 
                 focusInterval = setInterval(() => {
                     remainingSeconds--;
+                    elapsedFocusTime++;
                     updateDisplay();
                     if (remainingSeconds <= 0) {
                         endOfSession(totalSeconds/60, sessionTitle.textContent.includes('Fokus') ? 'Fokus' : 'Istirahat');
@@ -388,26 +396,29 @@
         }
         
         function updateDisplay() {
+            // Update tampilan utama (timer mundur)
             const m = String(Math.floor(remainingSeconds/60)).padStart(2,'0');
             const s = String(remainingSeconds%60).padStart(2,'0');
             focusDisplay.textContent = `${m}:${s}`;
             
+            // Update tampilan persentase (di atas timer mundur)
             const pct = (Math.max(0, remainingSeconds) / totalSeconds) * 100;
             const roundedPct = `${Math.round(pct)}%`;
-
             percentageDisplay.textContent = roundedPct;
-            bottomRightPercentage.textContent = roundedPct;
+
+            // Update tampilan di pojok kanan bawah (stopwatch maju)
+            const mElapsed = String(Math.floor(elapsedFocusTime / 60)).padStart(2,'0');
+            const sElapsed = String(elapsedFocusTime % 60).padStart(2,'0');
+            bottomRightDisplay.textContent = `${mElapsed}:${sElapsed}`;
 
             if (pct <= 20) {
                 progressBar.style.backgroundColor = COLOR_LOW;
-                bottomRightPercentage.style.color = WHITE;
-            } else if (pct <= 50) {
+            } else if (pct <= 60) {
                 progressBar.style.backgroundColor = COLOR_MEDIUM;
-                bottomRightPercentage.style.color = WHITE;
             } else {
                 progressBar.style.backgroundColor = COLOR_HIGH;
-                bottomRightPercentage.style.color = WHITE;
             }
+            bottomRightDisplay.style.color = WHITE; // Pertahankan warna putih untuk stopwatch
         }
 
         function updateDailyLog() {
