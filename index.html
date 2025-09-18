@@ -33,6 +33,30 @@
             z-index: -1;
         }
 
+        /* Gaya baru untuk tombol notifikasi */
+        #notifyButton {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background-color: transparent;
+            border: 2px solid #fff;
+            color: #00b894;
+            padding: 10px;
+            font-size: 1.5em;
+            cursor: pointer;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            transition: background-color 0.3s, transform 0.2s;
+            z-index: 10;
+        }
+
+        #notifyButton:hover { 
+            background-color: #fff;
+            color: #fff;
+            transform: scale(1.1);
+        }
+
         #homeScreen, #focusScreen {
             display: flex;
             flex-direction: column;
@@ -61,8 +85,8 @@
 
         #pomodoroButton {
             background-color: transparent;
-            border: 2px solid #00b894;
-            color: #00b894;
+            border: 2px solid #fff;
+            color: #fff;
             padding: 15px 30px;
             font-size: 1.5em;
             cursor: pointer;
@@ -71,9 +95,8 @@
             transition: background-color 0.3s, transform 0.2s;
         }
         #pomodoroButton:hover { background-color: #00b894; color: #fff; transform: scale(1.05); }
-
-        #backButton {
-            margin-top: 40px;
+        
+        #backButton, #pauseButton {
             background-color: transparent;
             border: 2px solid #fff;
             color: #fff;
@@ -82,7 +105,13 @@
             cursor: pointer;
             border-radius: 5px;
         }
-        #backButton:hover { background: #fff; color: #000; }
+        #backButton:hover, #pauseButton:hover { background: #fff; color: #000; }
+
+        #backPauseContainer {
+            display: flex;
+            gap: 15px;
+            margin-top: 40px;
+        }
         
         #sessionTitle {
             font-size: 2em;
@@ -104,14 +133,15 @@
 <body>
 
     <div id="progressBar"></div>
+    <button id="notifyButton">🔔</button>
 
     <div id="homeScreen">
         <h2>☕ Sruup your Coffee...</h2>
         <h1 id="stopwatchDisplay">00:00</h1>
+        <button class="time-button" data-minutes="1">1 Menit</button>
         <button class="time-button" data-minutes="10">10 Menit</button>
-        <button class="time-button" data-minutes="30">30 Menit</button>
-        <button class="time-button" data-minutes="60">60 Menit</button>
         <button id="pomodoroButton">Pomodoro</button>
+        <button class="time-button" data-minutes="60">60 Menit</button>
         
         <div id="productivityStats">
             <p>Total Waktu Fokus Hari Ini: <b id="dailyFocusTime">0 Menit</b></p>
@@ -125,10 +155,14 @@
         <h2 id="sessionTitle"></h2>
         <h2 id="percentageDisplay" style="font-size: 2em; margin-bottom: -10px;"></h2>
         <h1 id="focusDisplay">00:00</h1>
-        <button id="backButton">Kembali</button>
+        <div id="backPauseContainer">
+            <button id="backButton">Kembali</button>
+            <button id="pauseButton">Jeda</button>
+        </div>
     </div>
 
     <audio id="dingSound" src="ding.mp3" preload="auto"></audio>
+    <audio id="tictacSound" src="tictac.mp3" preload="auto" loop></audio>
 
     <script>
         const homeScreen = document.getElementById('homeScreen');
@@ -138,10 +172,13 @@
         const percentageDisplay = document.getElementById('percentageDisplay');
         const sessionTitle = document.getElementById('sessionTitle');
         const backButton = document.getElementById('backButton');
+        const pauseButton = document.getElementById('pauseButton');
         const progressBar = document.getElementById('progressBar');
         const dingSound = document.getElementById('dingSound');
+        const tictacSound = document.getElementById('tictacSound');
         const timeButtons = document.querySelectorAll('.time-button');
         const pomodoroButton = document.getElementById('pomodoroButton');
+        const notifyButton = document.getElementById('notifyButton');
         const dailyFocusTimeDisplay = document.getElementById('dailyFocusTime');
         const productivityChartCanvas = document.getElementById('productivityChart').getContext('2d');
 
@@ -149,16 +186,42 @@
         let elapsed = 0;
         let wakeLock = null;
         let isPomodoroActive = false;
+        let notificationEnabled = false;
+        let isPaused = false;
+        let remainingSeconds = 0;
+        let totalSeconds = 0;
 
         const COLOR_HIGH = '#2ed573';
         const COLOR_MEDIUM = '#ffa502';
         const COLOR_LOW = '#ff4757';
 
-        // Inisialisasi log
         let focusLog = JSON.parse(localStorage.getItem('focusLog')) || [];
         let myChart;
 
-        // === Wake Lock ===
+        function requestNotificationPermission() {
+            if ('Notification' in window) {
+                Notification.requestPermission().then(permission => {
+                    if (permission === 'granted') {
+                        notificationEnabled = true;
+                        notifyButton.style.border = '2px solid #00b894';
+                        notifyButton.style.color = '#00b894';
+                        console.log('Izin notifikasi diberikan.');
+                    } else {
+                        console.log('Izin notifikasi ditolak.');
+                    }
+                });
+            }
+        }
+        
+        function showNotification(title, body) {
+            if (notificationEnabled && Notification.permission === 'granted') {
+                new Notification(title, {
+                    body: body,
+                    icon: 'https://cdn.jsdelivr.net/gh/devicons/devicon/icons/javascript/javascript-original.svg'
+                });
+            }
+        }
+
         async function requestWakeLock() {
             try {
                 if ("wakeLock" in navigator) {
@@ -185,9 +248,9 @@
             }
         }
 
-        // stopwatch (break mode)
         function startStopwatch() {
             clearInterval(stopwatchInterval);
+            tictacSound.pause();
             elapsed = 0;
             progressBar.style.animation = 'none';
             progressBar.style.backgroundColor = '#ff0000';
@@ -199,92 +262,127 @@
                 stopwatchDisplay.textContent = `${m}:${s}`;
             }, 1000);
 
-            requestWakeLock(); // layar tetap nyala
+            requestWakeLock();
         }
 
-        // fokus countdown (dengan animasi drain)
+        function endOfSession(sessionMinutes, sessionType) {
+            clearInterval(focusInterval);
+            dingSound.play();
+            tictacSound.pause();
+
+            if (sessionType === 'Fokus') {
+                 showNotification('Waktunya Istirahat!', 'Sesi fokus telah selesai. Ambil istirahat 5 menit!');
+            } else {
+                 showNotification('Waktunya Fokus!', 'Sesi istirahat telah selesai. Mulai fokus kembali!');
+            }
+
+            focusLog.push({
+                date: new Date().toISOString().slice(0, 10),
+                duration: sessionMinutes,
+                type: sessionType
+            });
+            localStorage.setItem('focusLog', JSON.stringify(focusLog));
+            updateDailyLog();
+            createChart();
+
+            if (isPomodoroActive) {
+                if (sessionType === 'Fokus') {
+                    startFocus(5, 'Istirahat'); 
+                } else {
+                    isPomodoroActive = false;
+                    focusScreen.classList.add('hidden');
+                    homeScreen.classList.remove('hidden');
+                    startStopwatch();
+                }
+            } else {
+                focusScreen.classList.add('hidden');
+                homeScreen.classList.remove('hidden');
+                startStopwatch();
+            }
+        }
+
         function startFocus(minutes, sessionType = 'Fokus') {
             clearInterval(stopwatchInterval);
-            releaseWakeLock(); // biarkan layar bisa mati saat fokus
+            releaseWakeLock();
 
-            let totalSeconds = minutes * 60;
-            let remain = totalSeconds;
+            tictacSound.pause(); 
+            if (minutes > 0) {
+                 tictacSound.play().catch(e => console.error("Gagal memutar tictac.mp3:", e));
+            }
+
+            totalSeconds = minutes * 60;
+            remainingSeconds = totalSeconds;
 
             homeScreen.classList.add('hidden');
             focusScreen.classList.remove('hidden');
 
-            // Perbarui judul sesi
             sessionTitle.textContent = sessionType === 'Fokus' ? 'Sesi Fokus' : 'Sesi Istirahat';
-
-            // restart animasi
+            
+            isPaused = false;
+            pauseButton.textContent = 'Jeda';
+            
             progressBar.style.animation = 'none';
             void progressBar.offsetWidth;
             progressBar.style.animation = `drainAnimation ${totalSeconds}s linear forwards`;
             progressBar.style.animationPlayState = 'running';
             progressBar.style.backgroundColor = COLOR_HIGH;
 
-            function update() {
-                const m = String(Math.floor(remain/60)).padStart(2,'0');
-                const s = String(remain%60).padStart(2,'0');
-                focusDisplay.textContent = `${m}:${s}`;
-                
-                // Perbarui tampilan persentase
-                const pct = (remain / totalSeconds) * 100;
-                percentageDisplay.textContent = `${Math.round(pct)}%`;
-
-                if (pct <= 20) progressBar.style.backgroundColor = COLOR_LOW;
-                else if (pct <= 50) progressBar.style.backgroundColor = COLOR_MEDIUM;
-                else progressBar.style.backgroundColor = COLOR_HIGH;
-            }
-            update();
+            updateDisplay();
 
             focusInterval = setInterval(() => {
-                remain--;
-                update();
-                if (remain < 0) {
-                    clearInterval(focusInterval);
-                    dingSound.play();
-                    
-                    // Log sesi yang telah selesai
-                    focusLog.push({
-                        date: new Date().toISOString().slice(0, 10),
-                        duration: minutes,
-                        type: sessionType
-                    });
-                    localStorage.setItem('focusLog', JSON.stringify(focusLog));
-                    updateDailyLog();
-                    createChart();
-
-                    if (isPomodoroActive) {
-                        // Jika sesi fokus, mulai istirahat. Jika istirahat, kembali ke home.
-                        if (sessionType === 'Fokus') {
-                            startFocus(5, 'Istirahat'); // Sesi istirahat 5 menit
-                        } else {
-                            // Sesi Pomodoro selesai, kembali ke mode stopwatch
-                            isPomodoroActive = false;
-                            focusScreen.classList.add('hidden');
-                            homeScreen.classList.remove('hidden');
-                            startStopwatch();
-                        }
-                    } else {
-                        // Jika bukan mode Pomodoro, kembali ke mode stopwatch
-                        focusScreen.classList.add('hidden');
-                        homeScreen.classList.remove('hidden');
-                        startStopwatch();
-                    }
+                remainingSeconds--;
+                updateDisplay();
+                if (remainingSeconds <= 0) {
+                    endOfSession(minutes, sessionType);
                 }
             }, 1000);
         }
 
         function stopFocus() {
             clearInterval(focusInterval);
+            tictacSound.pause();
             isPomodoroActive = false;
             focusScreen.classList.add('hidden');
             homeScreen.classList.remove('hidden');
             startStopwatch();
         }
 
-        // --- Fitur Baru: Log & Visualisasi ---
+        function togglePause() {
+            if (isPaused) {
+                isPaused = false;
+                pauseButton.textContent = 'Lanjut';
+                tictacSound.play();
+                progressBar.style.animationPlayState = 'running';
+                
+                focusInterval = setInterval(() => {
+                    remainingSeconds--;
+                    updateDisplay();
+                    if (remainingSeconds <= 0) {
+                        endOfSession(totalSeconds/60, sessionTitle.textContent.includes('Fokus') ? 'Fokus' : 'Istirahat');
+                    }
+                }, 1000);
+            } else {
+                isPaused = true;
+                pauseButton.textContent = 'Jeda';
+                tictacSound.pause();
+                progressBar.style.animationPlayState = 'paused';
+                clearInterval(focusInterval);
+            }
+        }
+        
+        function updateDisplay() {
+            const m = String(Math.floor(remainingSeconds/60)).padStart(2,'0');
+            const s = String(remainingSeconds%60).padStart(2,'0');
+            focusDisplay.textContent = `${m}:${s}`;
+            
+            const pct = (Math.max(0, remainingSeconds) / totalSeconds) * 100;
+            percentageDisplay.textContent = `${Math.round(pct)}%`;
+
+            if (pct <= 20) progressBar.style.backgroundColor = COLOR_LOW;
+            else if (pct <= 50) progressBar.style.backgroundColor = COLOR_MEDIUM;
+            else progressBar.style.backgroundColor = COLOR_HIGH;
+        }
+
         function updateDailyLog() {
             const today = new Date().toISOString().slice(0, 10);
             const dailyMinutes = focusLog.filter(log => log.date === today && log.type === 'Fokus')
@@ -293,10 +391,8 @@
         }
 
         function createChart() {
-            // Ambil data log dari localStorage
             const logData = JSON.parse(localStorage.getItem('focusLog')) || [];
             
-            // Proses data untuk grafik (menghitung total menit fokus per hari)
             const dailyFocus = {};
             logData.filter(log => log.type === 'Fokus').forEach(log => {
                 if (dailyFocus[log.date]) {
@@ -306,7 +402,6 @@
                 }
             });
 
-            // Siapkan data untuk 7 hari terakhir
             const labels = [];
             const data = [];
             for (let i = 6; i >= 0; i--) {
@@ -318,7 +413,6 @@
                 data.push(dailyFocus[dateStr] || 0);
             }
 
-            // Hancurkan grafik yang lama jika ada untuk membuat yang baru
             if (myChart) {
                 myChart.destroy();
             }
@@ -360,10 +454,9 @@
             });
         }
 
-        // Event listeners
         pomodoroButton.addEventListener('click', () => {
             isPomodoroActive = true;
-            startFocus(25, 'Fokus'); // Mulai sesi fokus 25 menit
+            startFocus(25, 'Fokus');
         });
 
         timeButtons.forEach(btn => {
@@ -374,8 +467,15 @@
             });
         });
         backButton.addEventListener('click', stopFocus);
+        pauseButton.addEventListener('click', togglePause);
 
-        // start stopwatch langsung saat load dan perbarui log
+        notifyButton.addEventListener('click', requestNotificationPermission);
+        if ('Notification' in window && Notification.permission === 'granted') {
+             notificationEnabled = true;
+             notifyButton.style.border = '2px solid #00b894';
+             notifyButton.style.color = '#00b894';
+        }
+
         startStopwatch();
         updateDailyLog();
         createChart();
