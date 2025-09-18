@@ -1,225 +1,384 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Focus Timer</title>
-  <style>
-    @keyframes drainAnimation {
-      from { height: 100vh; }
-      to { height: 0; }
-    }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Focus Timer</title>
+    <style>
+        @keyframes drainAnimation {
+            from { height: 100vh; }
+            to { height: 0; }
+        }
 
-    body {
-      background-color: #000;
-      color: #fff;
-      font-family: sans-serif;
-      margin: 0;
-      overflow: hidden;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      height: 90vh;
-      text-align: center;
-    }
+        body {
+            background-color: #000;
+            color: #fff;
+            font-family: sans-serif;
+            margin: 0;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 90vh;
+            text-align: center;
+        }
 
-    #progressBar {
-      position: fixed;
-      bottom: 0;
-      left: 0;
-      width: 100%;
-      height: 0;
-      transition: background-color 1.5s ease;
-      z-index: -1;
-    }
+        #progressBar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 0;
+            transition: background-color 1.5s ease;
+            z-index: -1;
+        }
 
-    #homeScreen, #focusScreen {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 20px;
-    }
+        #homeScreen, #focusScreen {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+        }
 
-    #stopwatchDisplay, #focusDisplay {
-      font-size: 8em;
-      font-weight: 300;
-      margin: 0;
-    }
+        #stopwatchDisplay, #focusDisplay {
+            font-size: 8em;
+            font-weight: 300;
+            margin: 0;
+        }
 
-    .time-button {
-      background-color: transparent;
-      border: 2px solid #fff;
-      color: white;
-      padding: 15px 30px;
-      font-size: 1.5em;
-      cursor: pointer;
-      border-radius: 8px;
-      width: 200px;
-      transition: background-color 0.3s, transform 0.2s;
-    }
-    .time-button:hover { background-color: #fff; color: red; transform: scale(1.05); }
+        .time-button {
+            background-color: transparent;
+            border: 2px solid #fff;
+            color: white;
+            padding: 15px 30px;
+            font-size: 1.5em;
+            cursor: pointer;
+            border-radius: 8px;
+            width: 200px;
+            transition: background-color 0.3s, transform 0.2s;
+        }
+        .time-button:hover { background-color: #fff; color: red; transform: scale(1.05); }
 
-    #backButton {
-      margin-top: 40px;
-      background-color: transparent;
-      border: 2px solid #fff;
-      color: #fff;
-      padding: 10px 25px;
-      font-size: 1em;
-      cursor: pointer;
-      border-radius: 5px;
-    }
-    #backButton:hover { background: #fff; color: #000; }
+        #pomodoroButton {
+            background-color: transparent;
+            border: 2px solid #00b894;
+            color: #00b894;
+            padding: 15px 30px;
+            font-size: 1.5em;
+            cursor: pointer;
+            border-radius: 8px;
+            width: 200px;
+            transition: background-color 0.3s, transform 0.2s;
+        }
+        #pomodoroButton:hover { background-color: #00b894; color: #fff; transform: scale(1.05); }
 
-    .hidden { display: none !important; }
-  </style>
+        #backButton {
+            margin-top: 40px;
+            background-color: transparent;
+            border: 2px solid #fff;
+            color: #fff;
+            padding: 10px 25px;
+            font-size: 1em;
+            cursor: pointer;
+            border-radius: 5px;
+        }
+        #backButton:hover { background: #fff; color: #000; }
+        
+        #sessionTitle {
+            font-size: 2em;
+            font-weight: 400;
+            margin-bottom: -10px;
+        }
+        
+        #productivityStats {
+            margin-top: 40px;
+            font-size: 1em;
+            text-align: center;
+            width: 100%;
+        }
+
+        .hidden { display: none !important; }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
 
-  <div id="progressBar"></div>
+    <div id="progressBar"></div>
 
-  <!-- Home = Stopwatch (break mode) -->
-  <div id="homeScreen">
-    <h2>☕ Sruup your Coffee...</h2>
-    <h1 id="stopwatchDisplay">00:00</h1>
-    <button class="time-button" data-minutes="5">5 Menit</button>
-    <button class="time-button" data-minutes="10">10 Menit</button>
-    <button class="time-button" data-minutes="15">15 Menit</button>
-    <button class="time-button" data-minutes="30">30 Menit</button>
-    <button class="time-button" data-minutes="60">60 Menit</button>
-  </div>
+    <div id="homeScreen">
+        <h2>☕ Sruup your Coffee...</h2>
+        <h1 id="stopwatchDisplay">00:00</h1>
+        <button class="time-button" data-minutes="10">10 Menit</button>
+        <button class="time-button" data-minutes="30">30 Menit</button>
+        <button class="time-button" data-minutes="60">60 Menit</button>
+        <button id="pomodoroButton">Pomodoro</button>
+        
+        <div id="productivityStats">
+            <p>Total Waktu Fokus Hari Ini: <b id="dailyFocusTime">0 Menit</b></p>
+            <div style="width: 80vw; max-width: 600px; margin: 20px auto;">
+                <canvas id="productivityChart"></canvas>
+            </div>
+        </div>
+    </div>
 
-  <!-- Focus mode -->
-  <div id="focusScreen" class="hidden">
-    <h1 id="focusDisplay">00:00</h1>
-    <button id="backButton">Kembali</button>
-  </div>
+    <div id="focusScreen" class="hidden">
+        <h2 id="sessionTitle"></h2>
+        <h2 id="percentageDisplay" style="font-size: 2em; margin-bottom: -10px;"></h2>
+        <h1 id="focusDisplay">00:00</h1>
+        <button id="backButton">Kembali</button>
+    </div>
 
-  <audio id="dingSound" src="ding.mp3" preload="auto"></audio>
+    <audio id="dingSound" src="ding.mp3" preload="auto"></audio>
 
-  <script>
-    const homeScreen = document.getElementById('homeScreen');
-    const focusScreen = document.getElementById('focusScreen');
-    const stopwatchDisplay = document.getElementById('stopwatchDisplay');
-    const focusDisplay = document.getElementById('focusDisplay');
-    const backButton = document.getElementById('backButton');
-    const progressBar = document.getElementById('progressBar');
-    const dingSound = document.getElementById('dingSound');
-    const timeButtons = document.querySelectorAll('.time-button');
+    <script>
+        const homeScreen = document.getElementById('homeScreen');
+        const focusScreen = document.getElementById('focusScreen');
+        const stopwatchDisplay = document.getElementById('stopwatchDisplay');
+        const focusDisplay = document.getElementById('focusDisplay');
+        const percentageDisplay = document.getElementById('percentageDisplay');
+        const sessionTitle = document.getElementById('sessionTitle');
+        const backButton = document.getElementById('backButton');
+        const progressBar = document.getElementById('progressBar');
+        const dingSound = document.getElementById('dingSound');
+        const timeButtons = document.querySelectorAll('.time-button');
+        const pomodoroButton = document.getElementById('pomodoroButton');
+        const dailyFocusTimeDisplay = document.getElementById('dailyFocusTime');
+        const productivityChartCanvas = document.getElementById('productivityChart').getContext('2d');
 
-    let stopwatchInterval, focusInterval;
-    let elapsed = 0;
-    let wakeLock = null;
+        let stopwatchInterval, focusInterval;
+        let elapsed = 0;
+        let wakeLock = null;
+        let isPomodoroActive = false;
 
-    const COLOR_HIGH = '#2ed573';
-    const COLOR_MEDIUM = '#ffa502';
-    const COLOR_LOW = '#ff4757';
+        const COLOR_HIGH = '#2ed573';
+        const COLOR_MEDIUM = '#ffa502';
+        const COLOR_LOW = '#ff4757';
 
-    // === Wake Lock ===
-    async function requestWakeLock() {
-      try {
-        if ("wakeLock" in navigator) {
-          wakeLock = await navigator.wakeLock.request("screen");
-          console.log("Wake Lock aktif");
-          wakeLock.addEventListener("release", () => {
-            console.log("Wake Lock dilepas");
-          });
+        // Inisialisasi log
+        let focusLog = JSON.parse(localStorage.getItem('focusLog')) || [];
+        let myChart;
+
+        // === Wake Lock ===
+        async function requestWakeLock() {
+            try {
+                if ("wakeLock" in navigator) {
+                    wakeLock = await navigator.wakeLock.request("screen");
+                    console.log("Wake Lock aktif");
+                    wakeLock.addEventListener("release", () => {
+                        console.log("Wake Lock dilepas");
+                    });
+                }
+            } catch (err) {
+                console.error(`${err.name}, ${err.message}`);
+            }
         }
-      } catch (err) {
-        console.error(`${err.name}, ${err.message}`);
-      }
-    }
 
-    async function releaseWakeLock() {
-      try {
-        if (wakeLock !== null) {
-          await wakeLock.release();
-          wakeLock = null;
-          console.log("Wake Lock manual release");
+        async function releaseWakeLock() {
+            try {
+                if (wakeLock !== null) {
+                    await wakeLock.release();
+                    wakeLock = null;
+                    console.log("Wake Lock manual release");
+                }
+            } catch (err) {
+                console.error(`${err.name}, ${err.message}`);
+            }
         }
-      } catch (err) {
-        console.error(`${err.name}, ${err.message}`);
-      }
-    }
 
-    // stopwatch (break mode)
-    function startStopwatch() {
-      clearInterval(stopwatchInterval);
-      elapsed = 0;
-      progressBar.style.animation = 'none';
-      progressBar.style.backgroundColor = '#ff0000';
-      progressBar.style.height = '100vh';
-      stopwatchInterval = setInterval(() => {
-        elapsed++;
-        const m = String(Math.floor(elapsed / 60)).padStart(2,'0');
-        const s = String(elapsed % 60).padStart(2,'0');
-        stopwatchDisplay.textContent = `${m}:${s}`;
-      }, 1000);
+        // stopwatch (break mode)
+        function startStopwatch() {
+            clearInterval(stopwatchInterval);
+            elapsed = 0;
+            progressBar.style.animation = 'none';
+            progressBar.style.backgroundColor = '#ff0000';
+            progressBar.style.height = '100vh';
+            stopwatchInterval = setInterval(() => {
+                elapsed++;
+                const m = String(Math.floor(elapsed / 60)).padStart(2,'0');
+                const s = String(elapsed % 60).padStart(2,'0');
+                stopwatchDisplay.textContent = `${m}:${s}`;
+            }, 1000);
 
-      requestWakeLock(); // layar tetap nyala
-    }
-
-    // fokus countdown (dengan animasi drain)
-    function startFocus(minutes) {
-      clearInterval(stopwatchInterval);
-      releaseWakeLock(); // biarkan layar bisa mati saat fokus
-
-      let totalSeconds = minutes*60;
-      let remain = totalSeconds;
-
-      homeScreen.classList.add('hidden');
-      focusScreen.classList.remove('hidden');
-
-      // restart animasi
-      progressBar.style.animation = 'none';
-      void progressBar.offsetWidth; 
-      progressBar.style.animation = `drainAnimation ${totalSeconds}s linear forwards`;
-      progressBar.style.animationPlayState = 'running';
-      progressBar.style.backgroundColor = COLOR_HIGH;
-
-      function update() {
-        const m = String(Math.floor(remain/60)).padStart(2,'0');
-        const s = String(remain%60).padStart(2,'0');
-        focusDisplay.textContent = `${m}:${s}`;
-
-        const pct = (remain/totalSeconds)*100;
-        if (pct <= 20) progressBar.style.backgroundColor = COLOR_LOW;
-        else if (pct <= 50) progressBar.style.backgroundColor = COLOR_MEDIUM;
-        else progressBar.style.backgroundColor = COLOR_HIGH;
-      }
-      update();
-
-      focusInterval = setInterval(() => {
-        remain--;
-        update();
-        if (remain < 0) {
-          clearInterval(focusInterval);
-          dingSound.play();
-          // balik ke break (stopwatch)
-          focusScreen.classList.add('hidden');
-          homeScreen.classList.remove('hidden');
-          startStopwatch();
+            requestWakeLock(); // layar tetap nyala
         }
-      }, 1000);
-    }
 
-    function stopFocus() {
-      clearInterval(focusInterval);
-      focusScreen.classList.add('hidden');
-      homeScreen.classList.remove('hidden');
-      startStopwatch();
-    }
+        // fokus countdown (dengan animasi drain)
+        function startFocus(minutes, sessionType = 'Fokus') {
+            clearInterval(stopwatchInterval);
+            releaseWakeLock(); // biarkan layar bisa mati saat fokus
 
-    timeButtons.forEach(btn=>{
-      btn.addEventListener('click', ()=>{
-        const m = parseInt(btn.dataset.minutes);
-        startFocus(m);
-      });
-    });
-    backButton.addEventListener('click', stopFocus);
+            let totalSeconds = minutes * 60;
+            let remain = totalSeconds;
 
-    // start stopwatch langsung saat load
-    startStopwatch();
-  </script>
+            homeScreen.classList.add('hidden');
+            focusScreen.classList.remove('hidden');
+
+            // Perbarui judul sesi
+            sessionTitle.textContent = sessionType === 'Fokus' ? 'Sesi Fokus' : 'Sesi Istirahat';
+
+            // restart animasi
+            progressBar.style.animation = 'none';
+            void progressBar.offsetWidth;
+            progressBar.style.animation = `drainAnimation ${totalSeconds}s linear forwards`;
+            progressBar.style.animationPlayState = 'running';
+            progressBar.style.backgroundColor = COLOR_HIGH;
+
+            function update() {
+                const m = String(Math.floor(remain/60)).padStart(2,'0');
+                const s = String(remain%60).padStart(2,'0');
+                focusDisplay.textContent = `${m}:${s}`;
+                
+                // Perbarui tampilan persentase
+                const pct = (remain / totalSeconds) * 100;
+                percentageDisplay.textContent = `${Math.round(pct)}%`;
+
+                if (pct <= 20) progressBar.style.backgroundColor = COLOR_LOW;
+                else if (pct <= 50) progressBar.style.backgroundColor = COLOR_MEDIUM;
+                else progressBar.style.backgroundColor = COLOR_HIGH;
+            }
+            update();
+
+            focusInterval = setInterval(() => {
+                remain--;
+                update();
+                if (remain < 0) {
+                    clearInterval(focusInterval);
+                    dingSound.play();
+                    
+                    // Log sesi yang telah selesai
+                    focusLog.push({
+                        date: new Date().toISOString().slice(0, 10),
+                        duration: minutes,
+                        type: sessionType
+                    });
+                    localStorage.setItem('focusLog', JSON.stringify(focusLog));
+                    updateDailyLog();
+                    createChart();
+
+                    if (isPomodoroActive) {
+                        // Jika sesi fokus, mulai istirahat. Jika istirahat, kembali ke home.
+                        if (sessionType === 'Fokus') {
+                            startFocus(5, 'Istirahat'); // Sesi istirahat 5 menit
+                        } else {
+                            // Sesi Pomodoro selesai, kembali ke mode stopwatch
+                            isPomodoroActive = false;
+                            focusScreen.classList.add('hidden');
+                            homeScreen.classList.remove('hidden');
+                            startStopwatch();
+                        }
+                    } else {
+                        // Jika bukan mode Pomodoro, kembali ke mode stopwatch
+                        focusScreen.classList.add('hidden');
+                        homeScreen.classList.remove('hidden');
+                        startStopwatch();
+                    }
+                }
+            }, 1000);
+        }
+
+        function stopFocus() {
+            clearInterval(focusInterval);
+            isPomodoroActive = false;
+            focusScreen.classList.add('hidden');
+            homeScreen.classList.remove('hidden');
+            startStopwatch();
+        }
+
+        // --- Fitur Baru: Log & Visualisasi ---
+        function updateDailyLog() {
+            const today = new Date().toISOString().slice(0, 10);
+            const dailyMinutes = focusLog.filter(log => log.date === today && log.type === 'Fokus')
+                                         .reduce((sum, log) => sum + log.duration, 0);
+            dailyFocusTimeDisplay.textContent = `${dailyMinutes} Menit`;
+        }
+
+        function createChart() {
+            // Ambil data log dari localStorage
+            const logData = JSON.parse(localStorage.getItem('focusLog')) || [];
+            
+            // Proses data untuk grafik (menghitung total menit fokus per hari)
+            const dailyFocus = {};
+            logData.filter(log => log.type === 'Fokus').forEach(log => {
+                if (dailyFocus[log.date]) {
+                    dailyFocus[log.date] += log.duration;
+                } else {
+                    dailyFocus[log.date] = log.duration;
+                }
+            });
+
+            // Siapkan data untuk 7 hari terakhir
+            const labels = [];
+            const data = [];
+            for (let i = 6; i >= 0; i--) {
+                const d = new Date();
+                d.setDate(d.getDate() - i);
+                const dateStr = d.toISOString().slice(0, 10);
+                const dayName = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'][d.getDay()];
+                labels.push(dayName);
+                data.push(dailyFocus[dateStr] || 0);
+            }
+
+            // Hancurkan grafik yang lama jika ada untuk membuat yang baru
+            if (myChart) {
+                myChart.destroy();
+            }
+
+            myChart = new Chart(productivityChartCanvas, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Total Waktu Fokus (Menit)',
+                        data: data,
+                        backgroundColor: '#00b894',
+                        borderColor: '#00b894',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            grid: { color: 'rgba(255, 255, 255, 0.2)' },
+                            ticks: { color: '#fff' }
+                        },
+                        x: {
+                            grid: { display: false },
+                            ticks: { color: '#fff' }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            labels: {
+                                color: '#fff'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Event listeners
+        pomodoroButton.addEventListener('click', () => {
+            isPomodoroActive = true;
+            startFocus(25, 'Fokus'); // Mulai sesi fokus 25 menit
+        });
+
+        timeButtons.forEach(btn => {
+            btn.addEventListener('click', () => {
+                isPomodoroActive = false;
+                const m = parseInt(btn.dataset.minutes);
+                startFocus(m);
+            });
+        });
+        backButton.addEventListener('click', stopFocus);
+
+        // start stopwatch langsung saat load dan perbarui log
+        startStopwatch();
+        updateDailyLog();
+        createChart();
+    </script>
 </body>
 </html>
