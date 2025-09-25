@@ -74,7 +74,13 @@
             gap: 20px;
         }
 
-        #stopwatchDisplay, #focusDisplay {
+         #focusDisplay {
+            font-size: 50vh;
+            font-weight: 300;
+            margin: 0;
+        }
+        
+          #stopwatchDisplay {
             font-size: 8em;
             font-weight: 300;
             margin: 0;
@@ -149,7 +155,7 @@
     <div id="homeScreen">
         <h2>☕ Sruup your Coffee...</h2>
         <h1 id="stopwatchDisplay">00:00</h1>
-        <button class="time-button" data-minutes="5">5 Menit</button>
+        <button class="time-button" data-minutes="5">5 min Rule</button>
         <button class="time-button" data-minutes="10">10 Menit</button>
         <button id="pomodoroButton">Pomodoro</button>
         <button class="time-button" data-minutes="60">60 Menit</button>
@@ -167,8 +173,8 @@
         <h2 id="percentageDisplay" style="font-size: 2em; margin-bottom: -10px;"></h2>
         <h1 id="focusDisplay">00:00</h1>
         <div id="backPauseContainer">
-            <button id="backButton">↩️ Kembali</button>
-            <button id="pauseButton">⏳ Jeda</button>
+            <button id="backButton">↩️ BACK</button>
+            <button id="pauseButton">⏳ PAUSE</button>
         </div>
     </div>
 
@@ -217,7 +223,7 @@
                 Notification.requestPermission().then(permission => {
                     if (permission === 'granted') {
                         notificationEnabled = true;
-                        notifyButton.style.border = '2px solid #00b894';
+                        notifyButton.style.border = '2px solid #fff';
                         notifyButton.style.color = '#00b894';
                         console.log('Izin notifikasi diberikan.');
                     } else {
@@ -337,10 +343,10 @@
             focusScreen.classList.remove('hidden');
             bottomRightDisplay.classList.remove('hidden');
             
-            sessionTitle.textContent = sessionType === '🚀 Fokus' ? '🔥 Fokus Kerja' : '⏳ Sesi Istirahat';
+            sessionTitle.textContent = sessionType === '🚀 Fokus' ? '⏳ Sesi Istirahat' : '🔥 Fokus Kerja';
             
             isPaused = false;
-            pauseButton.textContent = 'Jeda';
+            pauseButton.textContent = '⏳ PAUSE';
             
             progressBar.style.animation = 'none';
             void progressBar.offsetWidth;
@@ -387,7 +393,7 @@
                 }, 1000);
             } else {
                 isPaused = true;
-                pauseButton.textContent = 'Lanjut';
+                pauseButton.textContent = '🚀 LANJUT';
                 tictacSound.pause();
                 progressBar.style.animationPlayState = 'paused';
                 clearInterval(focusInterval);
