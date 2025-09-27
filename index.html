@@ -97,7 +97,7 @@
             width: 300px;
             transition: background-color 0.3s, transform 0.2s;
         }
-        .time-button:hover { background-color: #fff; color: red; transform: scale(1.05); }
+        .time-button:hover { background-color: #fff; color: gray; transform: scale(1.05); }
 
         #pomodoroButton {
             background-color: transparent;
@@ -137,7 +137,7 @@
         
         #productivityStats {
             margin-top: 40px;
-            font-size: 1em;
+            font-size: 1.5em;
             text-align: center;
             width: 100%;
         }
@@ -153,7 +153,7 @@
     <span id="bottomRightDisplay" class="hidden"></span>
 
     <div id="homeScreen">
-        <h2>☕ Sruup your Coffee...</h2>
+        <h2>🍉 ISTIRAHAT 5 MENIT..</h2>
         <h1 id="stopwatchDisplay">00:00</h1>
         <button class="time-button" data-minutes="5">5 minute Rule</button>
         <button class="time-button" data-minutes="10">10 Menit</button>
@@ -210,9 +210,9 @@
         let remainingSeconds = 0;
         let totalSeconds = 0;
 
-        const COLOR_HIGH = '#2ed573';
-        const COLOR_MEDIUM = '#ffa502';
-        const COLOR_LOW = '#ff4757';
+        const COLOR_HIGH = '#2ed573'; // Hijau
+        const COLOR_MEDIUM = '#ffa502'; // Oranye
+        const COLOR_LOW = '#ff4757'; // Merah
         const WHITE = '#fff';
 
         let focusLog = JSON.parse(localStorage.getItem('focusLog')) || [];
@@ -275,19 +275,52 @@
             
             elapsed = 0;
             progressBar.style.animation = 'none';
-            progressBar.style.backgroundColor = '#960000';
+            progressBar.style.backgroundColor = COLOR_HIGH;
             progressBar.style.height = '100vh';
             
             bottomRightDisplay.classList.add('hidden');
+
+            // Mulai animasi drain untuk home screen
+            startHomeDrainAnimation();
 
             stopwatchInterval = setInterval(() => {
                 elapsed++;
                 const m = String(Math.floor(elapsed / 60)).padStart(2,'0');
                 const s = String(elapsed % 60).padStart(2,'0');
                 stopwatchDisplay.textContent = `${m}:${s}`;
+                
+                // Reset animasi setiap 5 menit
+                if (elapsed % 300 === 0) {
+                    startHomeDrainAnimation();
+                }
             }, 1000);
             
             requestWakeLock();
+        }
+        
+        function startHomeDrainAnimation() {
+            // Set progress bar ke tinggi penuh dan warna hijau
+            progressBar.style.height = '100vh';
+            progressBar.style.backgroundColor = COLOR_HIGH;
+            
+            // Hapus animasi sebelumnya jika ada
+            progressBar.style.animation = 'none';
+            
+            // Trigger reflow
+            void progressBar.offsetWidth;
+            
+            // Mulai animasi drain dengan durasi 5 menit (300 detik)
+            progressBar.style.animation = 'drainAnimation 300s linear forwards';
+            
+            // Tambahkan event listener untuk mengubah warna saat animasi berjalan
+            // Ini akan memastikan perubahan warna yang halus dari hijau ke merah
+            setTimeout(() => {
+                progressBar.style.backgroundColor = COLOR_MEDIUM;
+            }, 120000); // 2 menit (40% dari 5 menit)
+            
+            setTimeout(() => {
+                progressBar.style.backgroundColor = COLOR_LOW;
+            }, 240000); // 4 menit (80% dari 5 menit)
         }
 
         function endOfSession(sessionMinutes, sessionType) {
