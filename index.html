@@ -6,8 +6,8 @@
     <title>Focus Timer</title>
     <style>
         @keyframes drainAnimation {
-            from { height: 100vh; }
-            to { height: 0; }
+            from { width: 100%; }
+            to { width: 0%; }
         }
 
         body {
@@ -25,10 +25,10 @@
 
         #progressBar {
             position: fixed;
-            bottom: 0;
+            top: 0; /* Diubah dari bottom: 0 */
             left: 0;
-            width: 100%;
-            height: 0;
+            width: 100%; /* Diubah dari height: 0 */
+            height: 100vh; /* Diubah dari width: 100% */
             transition: background-color 1.5s ease;
             z-index: -1;
         }
@@ -153,7 +153,7 @@
     <span id="bottomRightDisplay" class="hidden"></span>
 
     <div id="homeScreen">
-        <h2>🍉 ISTIRAHAT 5 MENIT..</h2>
+        <h2>☕ Sruup your Coffee...</h2>
         <h1 id="stopwatchDisplay">00:00</h1>
         <button class="time-button" data-minutes="5">5 minute Rule</button>
         <button class="time-button" data-minutes="10">10 Menit</button>
@@ -276,7 +276,7 @@
             elapsed = 0;
             progressBar.style.animation = 'none';
             progressBar.style.backgroundColor = COLOR_HIGH;
-            progressBar.style.height = '100vh';
+            progressBar.style.width = '100%'; // Diubah dari height: '100vh'
             
             bottomRightDisplay.classList.add('hidden');
 
@@ -299,8 +299,8 @@
         }
         
         function startHomeDrainAnimation() {
-            // Set progress bar ke tinggi penuh dan warna hijau
-            progressBar.style.height = '100vh';
+            // Set progress bar ke lebar penuh dan warna hijau
+            progressBar.style.width = '100%'; // Diubah dari height: '100vh'
             progressBar.style.backgroundColor = COLOR_HIGH;
             
             // Hapus animasi sebelumnya jika ada
